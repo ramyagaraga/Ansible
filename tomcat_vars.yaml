@@ -1,0 +1,85 @@
+--- 
+- name: install tomcat 
+  hosts: all 
+  become: yes 
+  vars: 
+    java_package: openjdk-11-jdk 
+    group_name: tomcat 
+    user_name: tomcat 
+    tomcat_version: "10.0.27" 
+    tomcat_major_version: "10"
+  tasks: 
+  - name: install java 
+    ansible.builtin.apt: 
+      name: "{{java_package}}"
+      update_cache: true 
+      state: latest 
+  - name: create a group 
+    ansible.builtin.group: 
+      name: "{{group_name}}" 
+      state: present 
+      system: true 
+  - name: Creating a System User  
+    ansible.builtin.user: 
+      group: "{{group_name}}"
+      name: "{{user_name}}" 
+      create_home: true
+      home: /opt/tomcat 
+      shell: /bin/false 
+      state: present 
+      system: true 
+  - name: downloading tomcat 
+    ansible.builtin.get_url: 
+      dest: /tmp 
+      url : "https://dlcdn.apache.org/tomcat/tomcat-{{tomcat_major_version}}/v{{tomcat_version}}/bin/apache-tomcat-{{tomcat_version}}.tar.gz"
+  - name: extract tar file 
+    ansible.builtin.unarchive: 
+      dest: /opt/tomcat/ 
+      remote_src: true 
+      src: "/tmp/apache-tomcat-{{tomcat_version}}.tar.gz" 
+  - name: create a symbolic link 
+    ansible.builtin.file: 
+      path: /opt/tomcat/latest 
+      src: "/opt/tomcat/apache-tomcat-{{tomcat_version}}" 
+      state: link 
+  - name: change the ownership to user 
+    ansible.builtin.file: 
+      owner: "{{user_name}}" 
+      group: "{{group_name}}" 
+      path: /opt/tomcat 
+      recurse: true 
+  - name: give executable permission 
+    ansible.builtin.command: 
+      cmd: sudo sh -c 'chmod +x /opt/tomcat/latest/bin/*.sh' 
+  - name: create a service file 
+    ansible.builtin.copy: 
+      src: tomcat.service
+      dest: /etc/systemd/system/tomcat.service
+      group: "{{group_name}}"
+      owner: "{{user_name}}" 
+  - name: daemon reload 
+    ansible.builtin.systemd: 
+      daemon_reload: yes 
+      enabled: true 
+      name: tomcat.service
+      state: restarted 
+  - name: enable service file 
+    ansible.builtin.service: 
+      name: tomcat.service 
+      enabled: yes 
+      state: started 
+  - name: Configuring Tomcat Web Management Interface
+    ansible.builtin.copy: 
+      src: tomcat-users.xml 
+      dest: /opt/tomcat/latest/conf/tomcat-users.xml 
+  - name: manager app 
+    ansible.builtin.copy: 
+      src: context.xml 
+      dest: /opt/tomcat/latest/webapps/manager/META-INF/context.xml 
+  - name: host manager app 
+    ansible.builtin.copy: 
+      src: context.xml 
+      dest: /opt/tomcat/latest/webapps/host-manager/META-INF/context.xml
+
+
+
