@@ -1,0 +1,51 @@
+--- 
+- name: install openmrs 
+  hosts: all  
+  become: yes 
+  tasks: 
+    - name: install java 
+      ansible.builtin.apt: 
+        name: openjdk-11-jdk 
+        update_cache: true  
+        state: present 
+    - name: add group 
+      ansible.builtin.group: 
+        name: tomcat 
+        state: present 
+    - name: user add 
+      ansible.builtin.user: 
+        name: tomcat 
+        group: tomcat 
+        shell: /bin/false 
+        home: /opt/tomcat 
+        state: present 
+    - name: download tomcat 
+      ansible.builtin.get_url: 
+        dest: /tmp
+        url: https://archive.apache.org/dist/tomcat/tomcat-7/v7.0.109/bin/apache-tomcat-7.0.109.tar.gz
+        owner: tomcat 
+        group: tomcat 
+    - name: create a directory 
+      ansible.builtin.file: 
+        dest: /opt/tomcat 
+        state: directory 
+        mode: '1777' 
+    - name: extract the tar file 
+      ansible.builtin.unarchive: 
+        src: /tmp/apache-tomcat-7.0.109.tar.gz 
+        dest: /opt/tomcat/ 
+        group: tomcat 
+        owner: tomcat 
+    - name: change directory 
+      ansible.builtin.file: 
+        dest: /opt/tomcat 
+        state: directory 
+        owner: tomcat 
+        group: tomcat 
+        recurse: yes 
+    - name: change permissions 
+      ansible.builtin.file: 
+        path: /opt/tomcat 
+        group: tomcat 
+        mode: '1777' 
+        owner: tomcat 
